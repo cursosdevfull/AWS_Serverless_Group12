@@ -1,0 +1,8 @@
+post https://46rljjsv8d.execute-api.us-east-1.amazonaws.com/dev/appointment
+Content-Type: application/json
+
+{
+    "patientId": 50,
+    "scheduleId": 3000,
+    "countryISO": "MX"
+}

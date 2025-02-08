@@ -1,0 +1,45 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: proyecto
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: version01
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, "dev"}
+  iam:
+    role:
+      statements:
+        - Action: lambda:InvokeFunction
+          Effect: Allow
+          Resource: "arn:aws:lambda:us-east-1:282865065290:function:*"
+
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    exclude:
+      - "@aws-sdk/*"
+
+functions:
+  Appointment:
+    handler: src/handlers/appointment/index.handler
+    events:
+      - http:
+          path: /appointment
+          method: post
+    environment:
+      APPOINTMENT_PE: ${self:service}-${self:provider.stage}-AppointmentPE
+      APPOINTMENT_CO: ${self:service}-${self:provider.stage}-AppointmentCO
+      APPOINTMENT_MX: ${self:service}-${self:provider.stage}-AppointmentMX
+
+  AppointmentPE:
+    handler: src/handlers/appointment-pe/index.handler
+
+  AppointmentCO:
+    handler: src/handlers/appointment-co/index.handler
+
+  AppointmentMX:
+    handler: src/handlers/appointment-mx/index.handler
