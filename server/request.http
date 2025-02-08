@@ -1,0 +1,11 @@
+get http://localhost:3000
+
+###
+post https://irkh5ia42e.execute-api.us-east-1.amazonaws.com/dev/my-path
+Content-Type: application/json
+
+{
+    "name": "Juan",
+    "lastname": "Pérez",
+    "age": 34
+}

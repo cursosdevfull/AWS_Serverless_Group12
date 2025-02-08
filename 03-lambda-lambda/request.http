@@ -1,0 +1,7 @@
+post https://qx036f8itf.execute-api.us-east-1.amazonaws.com/dev/register
+Content-Type: application/json
+
+{
+    "name": "Alfonso",
+    "lastname": "Villanueva"
+}

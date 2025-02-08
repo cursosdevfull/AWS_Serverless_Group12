@@ -1,0 +1,18 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: example01-lambda
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: example01-lambda
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+
+functions:
+  myFirstFunction:
+    handler: my-function.myFirst
+    events:
+      - http:
+          path: /my-path
+          method: post

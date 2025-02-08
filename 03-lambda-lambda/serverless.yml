@@ -1,0 +1,37 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: example03-lambda-lambda
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: example03-lambda-lambda
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, "dev"}
+  iam:
+    role:
+      statements:
+        - Action: lambda:InvokeFunction
+          Effect: Allow
+          Resource: "*"
+
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    exclude:
+      - "@aws-sdk/*"
+
+functions:
+  Register: # example03-lambda-lambda-stg-Register
+    handler: src/handlers/register/index.register
+    events:
+      - http:
+          path: /register
+          method: post
+    environment:
+      REGISTER_CUSTOM: ${self:service}-${self:provider.stage}-RegisterCustom
+
+  RegisterCustom:
+    handler: src/handlers/register-custom/index.registerCustom
