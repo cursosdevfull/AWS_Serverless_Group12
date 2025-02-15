@@ -1,0 +1,53 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: example04-lambda-sqs-lambda
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: example04-lambda-sqs-lambda
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, "dev"}
+  iam:
+    role:
+      statements:
+        - Action: sqs:sendmessage
+          Effect: Allow
+          Resource:
+            - Fn::GetAtt:
+                - SqsRegister
+                - Arn
+
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    exclude:
+      - "@aws-sdk/*"
+
+functions:
+  Register: # example03-lambda-lambda-stg-Register
+    handler: src/handlers/register/index.register
+    events:
+      - http:
+          path: /register
+          method: post
+    environment:
+      SQS_REGISTER: !Ref SqsRegister
+
+  RegisterCustom:
+    handler: src/handlers/register-custom/index.registerCustom
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - SqsRegister
+              - Arn            
+
+resources:
+  Resources:
+    SqsRegister:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-SqsRegister
