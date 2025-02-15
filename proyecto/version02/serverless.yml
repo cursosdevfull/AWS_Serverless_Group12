@@ -1,0 +1,91 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: proyecto
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: version02
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, "dev"}
+  iam:
+    role:
+      statements:
+        - Action: sqs:sendmessage
+          Effect: Allow
+          Resource:
+            - Fn::GetAtt:
+                - SqsPE
+                - Arn
+            - Fn::GetAtt:
+                - SqsCO
+                - Arn
+            - Fn::GetAtt:
+                - SqsMX
+                - Arn
+
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    exclude:
+      - "@aws-sdk/*"
+
+functions:
+  Appointment:
+    handler: src/handlers/appointment/index.handler
+    events:
+      - http:
+          path: /appointment
+          method: post
+    environment:
+      SQS_URL_PE: ${self:service}-${self:provider.stage}-SqsPE
+      SQS_URL_CO: ${self:service}-${self:provider.stage}-SqsCO
+      SQS_URL_MX: ${self:service}-${self:provider.stage}-SqsMX
+
+  AppointmentPE:
+    handler: src/handlers/appointment-pe/index.handler
+    events:
+      - sqs:
+          batchSize: 5
+          maximumBatchingWindow: 30
+          arn:
+            Fn::GetAtt:
+              - SqsPE
+              - Arn              
+
+  AppointmentCO:
+    handler: src/handlers/appointment-co/index.handler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - SqsCO
+              - Arn 
+
+  AppointmentMX:
+    handler: src/handlers/appointment-mx/index.handler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - SqsMX
+              - Arn 
+  
+resources:
+  Resources:
+    SqsPE:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-SqsPE
+
+    SqsCO:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-SqsCO
+
+    SqsMX:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-SqsMX
