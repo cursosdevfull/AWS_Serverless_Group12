@@ -1,0 +1,88 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: example05-lambda-sns-sqs-lambda
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: example05-lambda-sns-sqs-lambda
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, "dev"}
+  iam:
+    role:
+      statements:
+        - Action: SNS:Publish
+          Effect: Allow
+          Resource: !Ref SnsRegister
+
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    exclude:
+      - "@aws-sdk/*"
+
+functions:
+  Register:
+    handler: src/handlers/register/index.register
+    events:
+      - http:
+          path: /register
+          method: post
+    environment:
+      SNS_REGISTER: !Ref SnsRegister
+
+  RegisterCustom:
+    handler: src/handlers/register-custom/index.registerCustom
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - SqsRegister
+              - Arn            
+
+resources:
+  Resources:
+    SnsRegister:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: "Topic to register"
+        TopicName: ${self:service}-${self:provider.stage}-SnsRegister
+
+    SqsRegister:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-SqsRegister
+
+    SubscriptionSQS:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Protocol: sqs
+        Endpoint: 
+          Fn::GetAtt:
+            - SqsRegister
+            - Arn
+        TopicArn:
+          Ref: SnsRegister
+        RawMessageDelivery: true
+        FilterPolicy:
+          countryISO:
+          - MX
+        FilterPolicyScope: MessageBody
+
+    PolicySQS:
+      Type: AWS::SQS::QueuePolicy
+      Properties:
+        Queues:
+          - !Ref SqsRegister
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: sqs:sendmessage
+              Resource: !GetAtt SqsRegister.Arn
+              Principal: "*"
+              Condition: 
+                ArnEquals:
+                  aws:SourceArn: !Ref SnsRegister
