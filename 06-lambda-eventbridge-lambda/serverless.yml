@@ -1,0 +1,87 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: example05-lambda-sns-sqs-lambda
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: example06-lambda-eventbridge-lambda
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, "dev"}
+  iam:
+    role:
+      statements: 
+        - Effect: Allow
+          Action: 
+            - events:PutEvents
+          Resource: '*'  
+
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    exclude:
+      - "@aws-sdk/*"
+
+functions:
+  Register:
+    handler: src/handlers/register/index.register
+    events:
+      - http:
+          path: /register
+          method: post
+    environment:
+      EVENT_BUS_NAME: !Ref MyEventBus
+
+  RegisterCustom:
+    handler: src/handlers/register-custom/index.registerCustom
+         
+
+resources:
+  Resources:
+    MyEventBus: 
+        Type: AWS::Events::EventBus
+        Properties: 
+            Name: "MyEventBus"
+
+    MyEventRule:
+      Type: 'AWS::Events::Rule'
+      Properties:
+        EventBusName: MyEventBus
+        EventPattern:
+          source:
+            - appointment_mobile
+          "detail-type":
+            - event_create_appointment
+        Targets:
+          - Arn:
+              Fn::GetAtt:
+                - RegisterCustomLambdaFunction
+                - Arn    
+            Id: "RegisterCustom"  
+            RoleArn: 
+              Fn::GetAtt: 
+                - EventBridgeIAMrole
+                - Arn       
+
+    EventBridgeIAMrole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: !Sub events.amazonaws.com
+              Action: 'sts:AssumeRole'
+        Path: /
+        Policies:
+          - PolicyName: InvokeLambda
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - 'lambda:InvokeFunction'
+                  Resource: "*"                     

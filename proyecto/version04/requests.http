@@ -1,0 +1,8 @@
+post https://j3kp30pbt4.execute-api.us-east-1.amazonaws.com/dev/appointment
+Content-Type: application/json
+
+{
+    "patientId": 250,
+    "scheduleId": 4500,
+    "countryISO": "MX"
+}
