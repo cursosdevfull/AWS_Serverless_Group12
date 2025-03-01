@@ -1,0 +1,75 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: example05-lambda-sns-sqs-lambda
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: example08-lambda-sqs-dlq-lambda
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, "dev"}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action: 
+            - sqs:SendMessage
+          Resource:
+            Fn::GetAtt:
+              - MySQS
+              - Arn
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    exclude:
+      - "@aws-sdk/*"
+
+functions:
+  Register:
+    handler: src/handlers/register/index.register
+    events:
+      - http:
+          path: /register
+          method: post
+    environment:
+      MY_SQS: !Ref MySQS
+
+  RegisterCustom:
+    handler: src/handlers/register-custom/index.registerCustom
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - MySQS
+              - Arn         
+
+  RegisterFailure:
+    handler: src/handlers/register-failure/index.registerFailure
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - MySQSDlq
+              - Arn                     
+
+resources:
+  Resources:
+    MySQS:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: "MySQS"
+        VisibilityTimeout: 10
+        RedrivePolicy:
+          deadLetterTargetArn: 
+            Fn::GetAtt:
+              - "MySQSDlq"
+              - "Arn"
+          maxReceiveCount: 1
+    
+    MySQSDlq:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: "MySQSDlq"
+        VisibilityTimeout: 10

@@ -1,0 +1,92 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: example05-lambda-sns-sqs-lambda
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: example09-lambda-dynamo
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, "dev"}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action: 
+            - dynamodb:PutItem
+            - dynamodb:Scan
+          Resource:
+            Fn::GetAtt:
+              - UserTable
+              - Arn
+
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    exclude:
+      - "@aws-sdk/*"
+
+functions:
+  Register:
+    handler: src/handlers/register/index.register
+    events:
+      - http:
+          path: /register
+          method: post       
+    environment:
+      USER_TABLE: !Ref UserTable       
+
+resources:
+  Resources:
+    UserTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: "id"
+            AttributeType: "S"
+          - AttributeName: "email"
+            AttributeType: "S"
+          - AttributeName: "age"
+            AttributeType: "N"
+          - AttributeName: "countryIso"
+            AttributeType: "S"
+          - AttributeName: "gender"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "id"
+            KeyType: "HASH"
+          - AttributeName: "email"
+            KeyType: "RANGE"
+        BillingMode: "PAY_PER_REQUEST"
+        TableName: "User"
+        LocalSecondaryIndexes:
+          - IndexName: "email-index"
+            KeySchema:
+              - AttributeName: "id"
+                KeyType: "HASH"            
+              - AttributeName: "email"
+                KeyType: "RANGE"
+            Projection:
+              ProjectionType: "ALL"
+          - IndexName: "age-index"
+            KeySchema:
+              - AttributeName: "id"
+                KeyType: "HASH"            
+              - AttributeName: "age"
+                KeyType: "RANGE"
+            Projection:
+              ProjectionType: "ALL"
+        GlobalSecondaryIndexes:
+          - IndexName: "gender-countryIso"
+            KeySchema:
+              - AttributeName: "gender"
+                KeyType: "HASH"
+              - AttributeName: "countryIso"
+                KeyType: "RANGE"
+            Projection:
+                ProjectionType: "ALL"
+              
+              
+                

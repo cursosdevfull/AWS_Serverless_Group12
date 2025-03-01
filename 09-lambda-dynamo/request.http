@@ -1,0 +1,8 @@
+post https://k7tamzofmf.execute-api.us-east-1.amazonaws.com/dev/register
+Content-Type: application/json
+
+{
+    "name": "Carlos",
+    "lastname": "Rivera",
+    "countryISO": "MX"
+}
