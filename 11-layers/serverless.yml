@@ -1,0 +1,41 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: layers
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  environment:
+    NODE_PATH: "./:/opt/node_modules"
+
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    exclude:
+      - "@aws-sdk/*"
+    external:
+      - "@curso-aws-group12/lib" 
+
+package:
+  exclude:
+    - "lib/**"
+
+layers:
+  LibModule:
+    path: lib
+    description: Library AWS for main project
+
+functions:
+  test:
+    handler: handler.main
+    events:
+      - http:
+          path: /test
+          method: get
+    layers:
+      - !Ref LibModuleLambdaLayer
+

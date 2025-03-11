@@ -1,0 +1,19 @@
+{
+  "name": "03-lambda-lambda",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@curso-aws-group12/lib": "^2.0.0",
+    "aws-sdk": "^2.1692.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1"
+  }
+}

@@ -1,0 +1,352 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: proyecto
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: version07
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, "dev"}
+  environment:
+    NODE_PATH: "./:/opt/node_modules"  
+  iam:
+    role:
+      statements:
+        - Action: SNS:Publish
+          Effect: Allow
+          Resource: !Ref SnsAppointment
+        - Effect: Allow
+          Action: 
+            - events:PutEvents
+          Resource: '*'
+        - Effect: Allow
+          Action: 
+            - dynamodb:PutItem
+            - dynamodb:Scan
+          Resource:
+            Fn::GetAtt:
+              - TableAppointment
+              - Arn                      
+
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    exclude:
+      - "@aws-sdk/*"
+    external:
+      - "@curso-aws-group12/lib"     
+
+package:
+  exclude:
+    - "lib/**"
+
+layers:
+  LibAwsModule:
+    path: lib
+    description: Library AWS for main project      
+
+functions:
+  Appointment:
+    handler: src/handlers/appointment/index.handler
+    events:
+      - http:
+          path: /appointment
+          method: post
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - EventBridgeSQS
+              - Arn           
+    environment:
+      SNS_APPOINTMENT: !Ref SnsAppointment
+      APPOINTMENT_TABLE: !Ref TableAppointment
+    layers:
+      - !Ref LibAwsModuleLambdaLayer      
+
+  AppointmentPE:
+    handler: src/handlers/appointment-pe/index.handler
+    events:
+      - sqs:
+          # batchSize: 5
+          # maximumBatchingWindow: 30
+          arn:
+            Fn::GetAtt:
+              - SqsPE
+              - Arn    
+    layers:
+      - !Ref LibAwsModuleLambdaLayer                           
+
+  AppointmentCO:
+    handler: src/handlers/appointment-co/index.handler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - SqsCO
+              - Arn 
+    layers:
+      - !Ref LibAwsModuleLambdaLayer                 
+
+  AppointmentMX:
+    handler: src/handlers/appointment-mx/index.handler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - SqsMX
+              - Arn 
+    layers:
+      - !Ref LibAwsModuleLambdaLayer                 
+
+  AppointmentFromMobile:
+    handler: src/handlers/appointment-from-mobile/index.handler
+    environment:
+      EVENT_BUS_NAME: !Ref EventBridgeBus   
+    layers:
+      - !Ref LibAwsModuleLambdaLayer         
+
+  HelpDesk:
+    handler: src/handlers/help-desk/index.handler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - SQSDlq
+              - Arn                  
+  
+resources:
+  Resources:
+    SnsAppointment:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: "Topic to schedule appointment"
+        TopicName: ${self:service}-${self:provider.stage}-SnsAppointment
+
+    SqsPE:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-SqsPE
+        RedrivePolicy:
+          deadLetterTargetArn: 
+            Fn::GetAtt:
+              - "SQSDlq"
+              - "Arn"
+          maxReceiveCount: 1            
+
+    SubscriptionSqsPE:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Protocol: sqs
+        Endpoint: 
+          Fn::GetAtt:
+            - SqsPE
+            - Arn
+        TopicArn:
+          Ref: SnsAppointment
+        RawMessageDelivery: true
+        FilterPolicy:
+          countryISO:
+          - PE
+        FilterPolicyScope: MessageBody
+
+    PolicySqsPE:
+      Type: AWS::SQS::QueuePolicy
+      Properties:
+        Queues:
+          - !Ref SqsPE
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: sqs:sendmessage
+              Resource: !GetAtt SqsPE.Arn
+              Principal: "*"
+              Condition: 
+                ArnEquals:
+                  aws:SourceArn: !Ref SnsAppointment
+
+    SqsCO:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-SqsCO
+        RedrivePolicy:
+          deadLetterTargetArn: 
+            Fn::GetAtt:
+              - "SQSDlq"
+              - "Arn"
+          maxReceiveCount: 1            
+
+    SubscriptionSqsCO:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Protocol: sqs
+        Endpoint: 
+          Fn::GetAtt:
+            - SqsCO
+            - Arn
+        TopicArn:
+          Ref: SnsAppointment
+        RawMessageDelivery: true
+        FilterPolicy:
+          countryISO:
+          - CO
+        FilterPolicyScope: MessageBody
+
+    PolicySqsCO:
+      Type: AWS::SQS::QueuePolicy
+      Properties:
+        Queues:
+          - !Ref SqsCO
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: sqs:sendmessage
+              Resource: !GetAtt SqsCO.Arn
+              Principal: "*"
+              Condition: 
+                ArnEquals:
+                  aws:SourceArn: !Ref SnsAppointment
+
+    SqsMX:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-SqsMX
+        RedrivePolicy:
+          deadLetterTargetArn: 
+            Fn::GetAtt:
+              - "SQSDlq"
+              - "Arn"
+          maxReceiveCount: 1        
+
+    SubscriptionSqsMX:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Protocol: sqs
+        Endpoint: 
+          Fn::GetAtt:
+            - SqsMX
+            - Arn
+        TopicArn:
+          Ref: SnsAppointment
+        RawMessageDelivery: true
+        FilterPolicy:
+          countryISO:
+          - MX
+        FilterPolicyScope: MessageBody
+
+    PolicySqsMX:
+      Type: AWS::SQS::QueuePolicy
+      Properties:
+        Queues:
+          - !Ref SqsMX
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: sqs:sendmessage
+              Resource: !GetAtt SqsMX.Arn
+              Principal: "*"
+              Condition: 
+                ArnEquals:
+                  aws:SourceArn: !Ref SnsAppointment        
+
+    EventBridgeSQS:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: "EventBridgeSQS"
+
+    EventBridgeBus: 
+        Type: AWS::Events::EventBus
+        Properties: 
+            Name: "EventBridgeBus"
+
+    EventBridgeRule:
+      Type: 'AWS::Events::Rule'
+      Properties:
+        EventBusName: EventBridgeBus
+        EventPattern:
+          source:
+            - appointment_mobile
+          "detail-type":
+            - event_create_appointment
+        Targets:
+          - Arn:
+              Fn::GetAtt:
+                - EventBridgeSQS
+                - Arn    
+            Id: "SQSClient"  
+
+    EventBridgePermissions:
+      Type: 'AWS::SQS::QueuePolicy'
+      Properties:
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: events.amazonaws.com            
+              Action: "sqs:SendMessage"
+              Resource:
+                Fn::GetAtt:
+                  - EventBridgeSQS
+                  - Arn    
+              Condition:
+                ArnEquals:
+                  "aws:SourceArn":
+                    Fn::GetAtt:
+                      - EventBridgeRule
+                      - Arn
+        Queues:
+          - !Ref EventBridgeSQS         
+    SQSDlq:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-SQSDlq
+        VisibilityTimeout: 10      
+
+    TableAppointment:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: "id"
+            AttributeType: "S"
+          - AttributeName: "patientId"
+            AttributeType: "N"
+          - AttributeName: "status"
+            AttributeType: "S"
+          - AttributeName: "countryISO"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "id"
+            KeyType: "HASH"
+        BillingMode: "PAY_PER_REQUEST"
+        TableName: "TableAppointment"
+        GlobalSecondaryIndexes:
+          - IndexName: "status-index"
+            KeySchema:
+              - AttributeName: "status"
+                KeyType: "HASH"
+              - AttributeName: "countryISO"
+                KeyType: "RANGE"
+            Projection:
+              ProjectionType: "ALL"    
+          - IndexName: "country-index"
+            KeySchema:
+              - AttributeName: "countryISO"
+                KeyType: "HASH"
+              - AttributeName: "status"
+                KeyType: "RANGE"
+            Projection:
+              ProjectionType: "ALL"
+          - IndexName: "patiend-id-index"
+            KeySchema:
+              - AttributeName: "patientId"
+                KeyType: "HASH"
+              - AttributeName: "status"
+                KeyType: "RANGE"
+            Projection:
+              ProjectionType: "ALL"                                                       

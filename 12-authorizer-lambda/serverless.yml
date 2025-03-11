@@ -1,0 +1,89 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: example05-lambda-sns-sqs-lambda
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: example12-authorizer-lambda
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, "dev"}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action: 
+            - dynamodb:PutItem
+            - dynamodb:Scan
+            - dynamodb:Query
+          Resource:
+            Fn::GetAtt:
+              - UserTable
+              - Arn  
+        - Effect: Allow
+          Action: 
+            - ssm:GetParameter
+          Resource: "*"
+
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    exclude:
+      - "@aws-sdk/*"
+
+functions:
+  Client:
+    handler: src/handlers/client/index.main
+    events:
+      - http:
+          path: /client
+          method: post   
+          cors: true
+          authorizer: Authorizer     
+
+  Login:
+    handler: src/handlers/login/index.main
+    events:
+      - http:
+          path: /login
+          method: post     
+    environment:
+      USER_TABLE: !Ref UserTable     
+      SSM_KEY_SECRET: !Ref SSMKeySecret
+      
+  Register:
+    handler: src/handlers/register/index.main
+    events:
+      - http:
+          path: /register
+          method: post 
+    environment:
+      USER_TABLE: !Ref UserTable         
+
+  Authorizer:
+    handler: src/handlers/authorizer/index.main            
+    environment:   
+      SSM_KEY_SECRET: !Ref SSMKeySecret
+      
+resources:
+  Resources:
+    UserTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: "user"
+        AttributeDefinitions:
+          - AttributeName: "email"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "email"
+            KeyType: "HASH"
+        BillingMode: PAY_PER_REQUEST
+
+    SSMKeySecret:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: KeySecret
+        Value: "C6buIsqwkhU90U5aK2JTkLE5P9gqpiE"
+        Type: String

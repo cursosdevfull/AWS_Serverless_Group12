@@ -1,0 +1,101 @@
+{
+  "name": "@curso-aws-group12/lib",
+  "version": "2.0.0",
+  "description": "Library for AWS services",
+  "scripts": {
+    "build": "tsup"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "eventbridge",
+    "sns",
+    "sqs"
+  ],
+  "author": "Sergio Hidalgo",
+  "license": "ISC",
+  "type": "commonjs",
+  "peerDependencies": {
+    "@aws-sdk/client-eventbridge": "^3.758.0",
+    "@aws-sdk/client-lambda": "^3.758.0",
+    "@aws-sdk/client-sns": "^3.758.0",
+    "@aws-sdk/client-sqs": "^3.758.0",
+    "@aws-sdk/util-dynamodb": "^3.758.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.2"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./event-bridge": {
+      "import": "./dist/event-bridge.js",
+      "require": "./dist/event-bridge.js",
+      "default": "./dist/event-bridge.js"
+    },
+    "./data-source": {
+      "import": "./dist/data-source.js",
+      "require": "./dist/data-source.js",
+      "default": "./dist/data-source.js"
+    },
+    "./dynamodb": {
+      "import": "./dist/dynamodb.js",
+      "require": "./dist/dynamodb.js",
+      "default": "./dist/dynamodb.js"
+    },
+    "./lambda": {
+      "import": "./dist/lambda.js",
+      "require": "./dist/lambda.js",
+      "default": "./dist/lambda.js"
+    },
+    "./sns": {
+      "import": "./dist/sns.js",
+      "require": "./dist/sns.js",
+      "default": "./dist/sns.js"
+    },
+    "./sqs": {
+      "import": "./dist/sqs.js",
+      "require": "./dist/sqs.js",
+      "default": "./dist/sqs.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "typesVersions": {
+    "*": {
+      "data-source": [
+        "./dist/data-source.d.ts"
+      ],
+      "dynamodb": [
+        "./dist/dynamodb.d.ts"
+      ],
+      "event-bridge": [
+        "./dist/event-bridge.d.ts"
+      ],
+      "lambda": [
+        "./dist/lambda.d.ts"
+      ],
+      "sns": [
+        "./dist/sns.d.ts"
+      ],
+      "sqs": [
+        "./dist/sqs.d.ts"
+      ]
+    }
+  }
+}

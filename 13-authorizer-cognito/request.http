@@ -1,0 +1,26 @@
+### Register
+post https://o0h44oltff.execute-api.us-east-1.amazonaws.com/dev/register
+Content-Type: application/json
+
+{
+    "email": "user@email.com",
+    "password": "12345"
+}
+
+### Login
+post https://o0h44oltff.execute-api.us-east-1.amazonaws.com/dev/login
+Content-Type: application/json
+
+{
+    "email": "user@email.com",
+    "password": "12345"
+}
+
+### Client
+post https://o0h44oltff.execute-api.us-east-1.amazonaws.com/dev/client
+Content-Type: application/json
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZW1haWwuY29tIiwiaWF0IjoxNzQxNDU1MTkzLCJleHAiOjE3NDE0NTg3OTN9.rqb-lI3wynpK0pJDYALQOAbf0L8j3BVX3yatDIsUUSk
+
+{
+    "name": "Client Name"
+}
