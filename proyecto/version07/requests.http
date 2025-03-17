@@ -1,8 +1,8 @@
-post https://ktiyov8r01.execute-api.us-east-1.amazonaws.com/dev/appointment
+post https://h8rvqzw8eb.execute-api.us-east-1.amazonaws.com/dev/appointment
 Content-Type: application/json
 
 {
-    "patientId": 1000,
-    "scheduleId": 9999,
-    "countryISO": "MX"
+    "patientId": 3333,
+    "scheduleId": 5555,
+    "countryISO": "CO"
 }

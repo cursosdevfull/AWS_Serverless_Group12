@@ -1,4 +1,4 @@
-post https://thipoe9ifj.execute-api.us-east-1.amazonaws.com/dev/appointment
+post https://5p24xutfv6.execute-api.us-east-1.amazonaws.com/dev/appointment
 Content-Type: application/json
 
 {

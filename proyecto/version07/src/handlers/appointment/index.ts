@@ -23,12 +23,12 @@ const sentAppointment = async (topicArn: string, data: string) => {
 export const handler = async (event: any) => {
   const { body, source } = DataSourceService.getBody(event);
 
-  const data = source !== "SQS" ? body : JSON.stringify(body.detail);
+  const data = source !== "SQS" ? JSON.stringify(body) : JSON.stringify(body.detail);
 
   const topicArn = process.env["SNS_APPOINTMENT"] || "";
   const tableName = process.env["APPOINTMENT_TABLE"] || "";
 
-  await sentAppointment(topicArn, data as string);
+  await sentAppointment(topicArn, data);
   await insertAppointment(tableName, body);
 
   return {

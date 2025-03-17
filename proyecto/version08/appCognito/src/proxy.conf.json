@@ -1,0 +1,7 @@
+{
+    "/dev/appointment": {
+        "target": "https://nn6ikaovcd.execute-api.us-east-1.amazonaws.com",
+        "secure": false,
+        "changeOrigin": true
+    }
+}

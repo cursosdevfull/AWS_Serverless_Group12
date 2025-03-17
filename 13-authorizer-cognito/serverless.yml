@@ -9,22 +9,6 @@ provider:
   name: aws
   runtime: nodejs20.x
   stage: ${opt:stage, "dev"}
-  iam:
-    role:
-      statements:
-        - Effect: Allow
-          Action: 
-            - dynamodb:PutItem
-            - dynamodb:Scan
-            - dynamodb:Query
-          Resource:
-            Fn::GetAtt:
-              - UserTable
-              - Arn  
-        - Effect: Allow
-          Action: 
-            - ssm:GetParameter
-          Resource: "*"
 
 build:
   esbuild:
@@ -34,56 +18,57 @@ build:
       - "@aws-sdk/*"
 
 functions:
-  Client:
-    handler: src/handlers/client/index.main
-    events:
-      - http:
-          path: /client
-          method: post   
-          cors: true
-          authorizer: Authorizer     
-
-  Login:
-    handler: src/handlers/login/index.main
-    events:
-      - http:
-          path: /login
-          method: post     
-    environment:
-      USER_TABLE: !Ref UserTable     
-      SSM_KEY_SECRET: !Ref SSMKeySecret
-      
   Register:
     handler: src/handlers/register/index.main
     events:
       - http:
           path: /register
-          method: post 
-    environment:
-      USER_TABLE: !Ref UserTable         
+          method: post   
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref AppointmentCognitoAuthorizer
 
-  Authorizer:
-    handler: src/handlers/authorizer/index.main            
-    environment:   
-      SSM_KEY_SECRET: !Ref SSMKeySecret
-      
 resources:
   Resources:
-    UserTable:
-      Type: AWS::DynamoDB::Table
+    AppointmentCognitoUserPool:
+      Type: AWS::Cognito::UserPool
       Properties:
-        TableName: "user"
-        AttributeDefinitions:
-          - AttributeName: "email"
-            AttributeType: "S"
-        KeySchema:
-          - AttributeName: "email"
-            KeyType: "HASH"
-        BillingMode: PAY_PER_REQUEST
+        UserPoolName: cognito-userpoll
+        UsernameAttributes:
+          - email
+        AutoVerifiedAttributes:
+          - email
+        EmailVerificationSubject: "Verificación requerida"
+        EmailVerificationMessage: "Gracias por registrarte en nuestra plataforma. Por favor verifica tu correo usando el siguiente código: {####}"
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireLowercase: false
+            RequireUppercase: false
+            RequireNumbers: false
+            RequireSymbols: false
+            TemporaryPasswordValidityDays: 0
 
-    SSMKeySecret:
-      Type: AWS::SSM::Parameter
+    AppointmentCognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
       Properties:
-        Name: KeySecret
-        Value: "C6buIsqwkhU90U5aK2JTkLE5P9gqpiE"
-        Type: String
+        ClientName: userpool-client
+        UserPoolId: !Ref AppointmentCognitoUserPool
+        GenerateSecret: false
+        ExplicitAuthFlows:
+          - ALLOW_USER_PASSWORD_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+          - ALLOW_USER_SRP_AUTH
+
+    AppointmentCognitoAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: authorizerCourse
+        IdentitySource: method.request.header.Authorization
+        RestApiId: !Ref ApiGatewayRestApi
+        Type: COGNITO_USER_POOLS 
+        ProviderARNs:
+          - Fn::GetAtt:
+              - AppointmentCognitoUserPool
+              - Arn

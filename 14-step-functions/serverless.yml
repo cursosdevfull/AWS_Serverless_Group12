@@ -1,0 +1,164 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: sergiohidalgocaceres
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: example05-lambda-sns-sqs-lambda
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: example14-step-functions
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, "dev"}
+
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    exclude:
+      - "@aws-sdk/*"
+
+functions:
+  step01:
+    handler: src/handlers/step01/index.main
+
+  step02:
+    handler: src/handlers/step02/index.main
+
+  stepError:
+    handler: src/handlers/step-error/index.main
+
+resources:
+  Resources:
+    StateMachineRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: states.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: StateMachinePolicy
+            PolicyDocument: 
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action: lambda:InvokeFunction
+                  Resource: "*"
+
+    AppointmentStateMachine:
+      Type: AWS::StepFunctions::StateMachine
+      Properties:
+        StateMachineName: appointment-state-machine
+        Definition:
+          Comment: "Process to create an appointment"
+          StartAt: Decision
+          States:
+            Decision:
+              Type: Choice
+              Choices:
+                - Variable: $.countryISO
+                  StringEquals: "PE"
+                  Next: StepPE
+                - Variable: $.countryISO
+                  StringEquals: "MX"
+                  Next: StepMX
+                - Variable: $.countryISO
+                  StringEquals: "EC"
+                  Next: StepError
+                - Not:
+                    Variable: $.countryISO
+                    StringEquals: "CO"
+                  Next: StateUnknown
+            StepPE:
+              Type: Task
+              Resource: !GetAtt Step01LambdaFunction.Arn
+              End: true
+            StepError:
+              Type: Task
+              Resource: !GetAtt StepErrorLambdaFunction.Arn
+              Catch:
+                - ErrorEquals: ["States.ALL"]
+                  Next: HandlerPEError
+              End: true              
+            StepMX:
+              Type: Task
+              Resource: !GetAtt Step02LambdaFunction.Arn
+              Next: TasksInParallel
+            StateUnknown:
+              Type: Task
+              Resource: !GetAtt Step01LambdaFunction.Arn
+              Next: MapState            
+            HandlerPEError:
+              Type: Pass
+              Result:
+                error: true
+                cause: "Error processing EC country"
+                errorInfo.$: "$.error"
+                errorCause.$: "$.cause"
+              Next: HandlerError
+            HandlerError:
+              Type: Task
+              Resource: !GetAtt Step01LambdaFunction.Arn
+              End: true            
+            MapState:
+              Type: Map
+              ItemsPath: "$.items"
+              MaxConcurrency: 1
+              Iterator:
+                StartAt: MapStep01
+                States:
+                  MapStep01:
+                    Type: Task
+                    Resource: !GetAtt Step01LambdaFunction.Arn
+                    Next: MapStep02
+                  MapStep02:
+                    Type: Task
+                    Resource: !GetAtt Step02LambdaFunction.Arn
+                    End: true
+              Next: StateEnd
+
+            StateEnd:
+              Type: Task
+              Resource: !GetAtt Step02LambdaFunction.Arn
+              End: true 
+
+            TasksInParallel:
+              Type: Parallel
+              Branches:
+                - StartAt: Task01
+                  States:
+                    Task01:
+                      Type: Task
+                      Resource: !GetAtt Step01LambdaFunction.Arn
+                      Next: Task02
+                    Task02:
+                      Type: Task
+                      Resource: !GetAtt Step02LambdaFunction.Arn
+                      End: true
+                - StartAt: Task03
+                  States:
+                    Task03:
+                      Type: Task
+                      Resource: !GetAtt Step02LambdaFunction.Arn
+                      End: true
+              End: true
+                    
+
+
+          # StartAt: Step01
+          # States:
+          #   Step01:
+          #     Type: Task
+          #     Resource: !GetAtt Step01LambdaFunction.Arn
+          #     Next: Step02
+          #   Step02:
+          #     Type: Task
+          #     Resource: !GetAtt Step02LambdaFunction.Arn
+          #     End: true
+        RoleArn:
+          Fn::GetAtt:
+            - StateMachineRole
+            - Arn
